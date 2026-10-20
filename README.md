@@ -6,6 +6,7 @@
 화면을 톡톡 눌러 코순이를 돕고, 모은 골드로 코순이를 키워 보세요.
 
 ▶ 플레이: https://lee-cloud999.github.io/mongle-forest/
+🧪 테스트 모드: https://lee-cloud999.github.io/mongle-forest/test.html (보스 바로 시작·골드 지급 등, 저장은 진짜 게임과 따로)
 
 - 챕터 1 새싹 들판 · 챕터 2 속삭이는 버섯숲
 - 패럴랙스 숲 배경, 아침 → 노을 → 별밤으로 바뀌는 하루
