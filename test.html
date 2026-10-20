@@ -443,7 +443,7 @@ const goldMult=()=>(1+state.luck*.04)*(1+.2*fr(1))*(rainbowUntil>Date.now()?2:1)
 const upCost=u=>Math.floor(u.base*u.g**state[u.k]);
 const mobId=()=>{const c=cur();return c.mobs[(prog().stage-1)%c.mobs.length]};
 const killGold=()=>Math.max(1,Math.round(cur().gold(prog().stage)*goldMult()));
-const enemyDmg=()=>golden?0:boss?cur().bossDmg:Math.floor(cur().dmg(prog().stage)*(elite?1.4:1));
+const enemyDmg=()=>golden?0:boss?Math.max(cur().bossDmg,Math.round(maxHp()*.05)):Math.floor(cur().dmg(prog().stage)*(elite?1.4:1));
 const gain=n=>{state.gold=Math.min(GOLD_CAP,state.gold+n)};
 let lungeBig=false,hp=maxHp(),enemyHp=0,enemyMax=0,boss=false,paused=false,restUntil=0,tickCount=0,lastTick=Date.now(),log='코순이가 숲을 탐험하고 있어요.',pose='',poseUntil=0,epose=0,epUntil=0,lungeUntil=0,secs=0,rainbowUntil=0,evLeft=90+Math.random()*60,elite=false,golden=false,goldenUntil=0,enterUntil=0,sceneShake=false,dashT=0,bossT=0,warnGuarded=false,shieldUntil=0,skCd=[0,0,0],skTot=[0,0,0],chestLeft=20+Math.random()*20,chestTtl=0,bonus=[];
 const setPose=(p,ms)=>{pose=p;poseUntil=Date.now()+ms};
@@ -475,7 +475,7 @@ function spawn(){const c=cur(),p=prog();
  elite=false;golden=false;
  if(!boss){if(p.kills===4)elite=true;else if(state.stats.kills>=8&&Math.random()<.04){golden=true;goldenUntil=Date.now()+8000}}
  enterUntil=Date.now()+450;walkUntil=Date.now()+1500;setTimeout(refreshEnemy,480);
- enemyMax=boss?c.bossHp:Math.floor(c.hp(p.stage)*(elite?2.2:golden?.7:1));enemyHp=enemyMax;
+ enemyMax=boss?Math.max(c.bossHp,Math.round(atk()*50*Math.min(1,state.attack/10))):Math.floor(c.hp(p.stage)*(elite?2.2:golden?.7:1));enemyHp=enemyMax;
  if(golden){showBanner('✨ 황금 몽글 출현!','8초 안에 달래요!');sfx.chime();setPose('surprise',1200)}else if(elite)showBanner('대장 등장!','')
  render()}
 
@@ -608,7 +608,7 @@ function hitFx(o){
  }catch(_){}
 }
 // damage dealt to the current enemy; returns true when it was calmed
-function strike(dmg,o){o=o||{};hitFx(o);punch(o);enemyHp-=dmg;floatText(o.crit?'✦ '+dmg+'!':o.big?'★ '+dmg+'!':String(dmg),o.crit||o.big?'crit':(o.tap?'tap':''),o.x,o.y);
+function strike(dmg,o){o=o||{};hitFx(o);punch(o);const _was=enemyHp;enemyHp-=dmg;if(boss&&_was>=enemyMax*.5&&enemyHp<enemyMax*.5&&enemyHp>0){showBanner('😤 '+MON[cur().boss].name+'이(가) 화났어요!','공격이 더 빨라져요. 힘내요!');shake();try{sfx.warn()}catch(_){}}floatText(o.crit?'✦ '+dmg+'!':o.big?'★ '+dmg+'!':String(dmg),o.crit||o.big?'crit':(o.tap?'tap':''),o.x,o.y);
  if(enemyHp<=0){onWin();return true}
  epose=1;epUntil=Date.now()+(o.tap?260:380);setTimeout(refreshEnemy,o.tap?300:420);renderBars();refreshEnemy();return false}
 
@@ -635,7 +635,7 @@ function enemyTurn(now){
    if(warnGuarded||shieldUntil>now){if(warnGuarded){state.stats.guards++;qEvent('guard')}const[x,y]=heroCenter();burst(x,y,10,false);sfx.guard();log='막았어요! 코순이가 씩씩해요 ✨';hp=Math.min(maxHp(),hp+Math.floor(maxHp()*.08));checkAch();flush()}
    else took=Math.floor(enemyDmg()*2.2);
    warnGuarded=false;
-  }else if(tickCount%2===0)took=enemyDmg();
+  }else if(tickCount%2===0||enemyHp<enemyMax*.5)took=enemyDmg();
  }else if(tickCount%2===0)took=enemyDmg();
  if(took&&shieldUntil>now)took=0;
  if(took){const big=boss&&bossT%8===0;hp-=took;lungeBig=big;lungeUntil=now+(big?520:340);setTimeout(refreshEnemy,big?560:380);floatText('-'+took,'hero');sfx.hurt();ouch(big)}
