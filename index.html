@@ -441,22 +441,25 @@ function dash(){const a=$('actor');if(a.classList.contains('hit'))return;a.class
 // the hit lands when Kosun actually reaches the monster (dash peak), so sound, effect and damage fire together
 // full dash (auto attack, skills) or a quick headbutt (each tap); every hit lands at the moment of contact.
 // Attacks never cut each other off: a new one waits in line until Kosun is back (at most one tap waits).
-let dashAt=0,dashImpactAt=0,dashEndAt=0,lastTapAt=-9999;const IMPACT=240,pend=[];
+let dashAt=0,dashImpactAt=0,dashEndAt=0,lastTapAt=-9999,impT=0,curCbs=[];const IMPACT=240,pend=[];
 function startDash(fast,cbs){const a=$('actor'),now=performance.now(),dur=fast?260:640,imp=fast?105:IMPACT;
  a.style.setProperty('--atk',((dur-20)/1000)+'s');a.classList.remove('hit');void a.offsetWidth;a.classList.add('hit');
- dashAt=now;dashImpactAt=now+imp;dashEndAt=now+dur;clearTimeout(dashT);
- dashT=setTimeout(()=>{a.classList.remove('hit');const n=pend.shift();if(n)startDash(n.fast,n.cbs)},dur);setTimeout(()=>cbs.forEach(f=>f()),imp)}
+ dashAt=now;dashImpactAt=now+imp;dashEndAt=now+dur;clearTimeout(dashT);curCbs=cbs;
+ dashT=setTimeout(()=>{a.classList.remove('hit');const n=pend.shift();if(n)startDash(n.fast,n.cbs)},dur);
+ impT=setTimeout(()=>{const f=curCbs;curCbs=[];f.forEach(g=>g())},imp)}
 const busyNow=()=>$('actor').classList.contains('hit'),tapping=()=>performance.now()-lastTapAt<450;
 // auto attack / skills: while the player is tapping they ride along with the quick headbutts instead of a long dash
 function atImpact(cb,force){const now=performance.now();
  if(!busyNow()){startDash(tapping(),[cb]);return}
- if(now<dashImpactAt&&!pend.length){setTimeout(cb,dashImpactAt-now);return}
+ if(now<dashImpactAt&&!pend.length){curCbs.push(cb);return}
  if(!force){cb();return}
  if(pend.length){pend[0].cbs.push(cb);return}
  pend.push({fast:tapping(),cbs:[cb]})}
-function tapReady(){return !busyNow()||!pend.some(p=>p.fast)}
-function tapAttack(cb){lastTapAt=performance.now();if(!busyNow()){startDash(true,[cb]);return}
- const q=pend.find(p=>p.fast);if(q){q.cbs.push(cb);return}if(pend.length){pend[0].fast=true;pend[0].cbs.push(cb);return}pend.push({fast:true,cbs:[cb]})}
+function tapReady(){return true}
+// a touch always headbutts right away: whatever was running is restarted, and its hits land with this headbutt
+function tapAttack(cb){lastTapAt=performance.now();clearTimeout(impT);
+ const carry=curCbs.concat(...pend.map(p=>p.cbs));pend.length=0;curCbs=[];
+ startDash(true,[cb,...carry])}
 // quests
 function rng(seed){let h=2166136261;for(const ch of seed){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return()=>{h+=0x6D2B79F5;let t=Math.imul(h^h>>>15,1|h);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
 function makeQuests(date){const r=rng('kosoon'+date),pool=QP.filter(q=>!q.need||q.need());for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}return pool.slice(0,3).map(q=>({id:q.id,target:q.n[Math.floor(r()*q.n.length)],n:0,claimed:false}))}
@@ -604,7 +607,7 @@ let combo=0,comboUntil=0,lastTap=0;
 function showCombo(){const c=$('combo');c.hidden=false;c.textContent='콤보 '+combo+(combo>=15?' 🔥':'');c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump')}
 $('scene').addEventListener('pointerdown',e=>{
  if(e.target.closest('#chest,#guardBtn'))return;
- const now=Date.now();if(paused||document.hidden||restUntil>now||now-lastTap<140||!tapReady())return;lastTap=now;
+ const now=Date.now();if(paused||document.hidden||restUntil>now||now-lastTap<90)return;lastTap=now;
  if(now>comboUntil)combo=0;combo++;comboUntil=now+1500;state.stats.taps++;if(combo>state.stats.bestCombo)state.stats.bestCombo=combo;
  const sr=$('scene').getBoundingClientRect(),x=Math.round(Math.max(10,Math.min(sr.width-10,e.clientX-sr.left))),y=Math.round(Math.max(10,Math.min(sr.height-10,e.clientY-sr.top)));
  const dmg=Math.max(1,Math.floor(atk()*.15*(1+Math.min(combo,20)*.04)));
