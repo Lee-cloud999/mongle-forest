@@ -632,7 +632,7 @@ $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if
 // treasure chest
 $('chest').onclick=()=>{if($('chest').hidden)return;const _cr=$('chest').getBoundingClientRect(),_sr=$('scene').getBoundingClientRect(),_cx=_cr.left-_sr.left+_cr.width/2,_cy=_cr.top-_sr.top+_cr.height/2;giftOut('pop');burst(_cx,_cy,12,true);coinBurst(_cx,_cy,8);$('chest').hidden=true;chestTtl=0;const g=killGold()*10;gain(g);state.stats.chests++;qEvent('chest');sfx.coin();log='보물 상자를 열었어요! 🪙 '+g.toLocaleString();floatText('+'+g.toLocaleString(),'gold');setPose('banana',1800);checkAch();flush();save();render()};
 function eventTick(){if(paused)return;evLeft--;if(evLeft<=0&&rainbowUntil<Date.now()){rainbowUntil=Date.now()+25000;showBanner('🌈 무지개 시간!','25초 동안 골드가 2배예요');sfx.fanfare();evLeft=150+Math.random()*150}}
-function chestTick(){if(paused)return;if(chestTtl>0){chestTtl--;if(!chestTtl)giftOut('away');return}chestLeft--;if(chestLeft<=0){chestFly();chestTtl=10;chestLeft=45+Math.random()*45}}
+function chestTick(){if(chestTtl>0){chestTtl--;if(!chestTtl)giftOut('away');return}if(paused)return;chestLeft--;if(chestLeft<=0){chestFly();chestTtl=10;chestLeft=45+Math.random()*45}}
 
 // dex + achievements
 function openList(title,html){$('listTitle').textContent=title;$('listBody').innerHTML=html;$('listDialog').showModal()}
@@ -764,7 +764,7 @@ function bossIntro(){
 function chestFly(){const c=$('chest'),sc=$('scene');c.classList.remove('flying');c.style.left='0';c.style.bottom=Math.round(95+Math.random()*55)+'px';
  c.style.setProperty('--sw',(sc.clientWidth+10)+'px');c.hidden=false;void c.offsetWidth;c.classList.add('flying');try{sfx.chime()}catch(_){}}
 function giftOut(kind){const c=$('chest'),sc=$('scene');try{if(!c.hidden&&calmMotion()){const r=c.getBoundingClientRect(),sr=sc.getBoundingClientRect(),g=document.createElement('i');g.className='giftfx '+kind;g.style.left=Math.round(r.left-sr.left+r.width/2)+'px';g.style.top=Math.round(r.top-sr.top+r.height/2)+'px';sc.append(g);setTimeout(()=>g.remove(),900)}}catch(_){}c.hidden=true;c.classList.remove('flying')}
-function chestPlay(){const c=$('chest');if(c)c.style.animationPlayState=(paused||restUntil>Date.now())?'paused':'running'}
+function chestPlay(){const c=$('chest');if(c)c.style.animationPlayState='running'}
 // ---------- v0.4: start over ----------
 function resetGame(){
  state=defaultState();state.lastSeen=Date.now();
