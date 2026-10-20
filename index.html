@@ -405,7 +405,12 @@ function showBubble(t){const b=$('bubble');b.textContent=t;b.hidden=false;b.clas
 function say(key,text){text=text||STORY[key];if(!text||state.seen[key])return;state.seen[key]=1;showBubble(text)}
 function shake(){if(!calmMotion())return;sceneShake=true;$('scene').classList.add('shake');setTimeout(()=>{sceneShake=false;$('scene').classList.remove('shake')},400)}
 function ouch(big){const a=$('actor');a.classList.remove('ouch','ouchbig');void a.offsetWidth;a.classList.add(big?'ouchbig':'ouch');setTimeout(()=>a.classList.remove('ouch','ouchbig'),big?600:380);const[x,y]=heroCenter();burst(x+10,y-10,big?12:5,big,true);if(big){shake();const f=document.createElement('i');f.className='redflash';$('scene').append(f);setTimeout(()=>f.remove(),420)}}
-function dash(){const a=$('actor');if(a.classList.contains('hit'))return;a.classList.remove('hit');void a.offsetWidth;a.classList.add('hit');clearTimeout(dashT);dashT=setTimeout(()=>a.classList.remove('hit'),640)}
+function dash(){const a=$('actor');if(a.classList.contains('hit'))return;a.classList.remove('hit');void a.offsetWidth;a.classList.add('hit');dashAt=performance.now();clearTimeout(dashT);dashT=setTimeout(()=>a.classList.remove('hit'),640)}
+// the hit lands when Kosun actually reaches the monster (dash peak), so sound, effect and damage fire together
+let dashAt=0;const IMPACT=240;
+function atImpact(cb,force){const a=$('actor'),now=performance.now(),busy=a.classList.contains('hit');
+ if(!busy||(force&&now-dashAt>IMPACT)){a.classList.remove('hit');void a.offsetWidth;a.classList.add('hit');dashAt=now;clearTimeout(dashT);dashT=setTimeout(()=>a.classList.remove('hit'),640);setTimeout(cb,IMPACT);return}
+ const t=dashAt+IMPACT-now;t>0?setTimeout(cb,t):cb()}
 // quests
 function rng(seed){let h=2166136261;for(const ch of seed){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return()=>{h+=0x6D2B79F5;let t=Math.imul(h^h>>>15,1|h);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
 function makeQuests(date){const r=rng('kosoon'+date),pool=QP.filter(q=>!q.need||q.need());for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}return pool.slice(0,3).map(q=>({id:q.id,target:q.n[Math.floor(r()*q.n.length)],n:0,claimed:false}))}
@@ -544,11 +549,8 @@ function hit(){
  if(restUntil){restUntil=0;hp=maxHp();log='충분히 쉬었어요. 다시 모험을 떠나요!'}
  tickCount++;hp=Math.min(maxHp(),hp+recovery());
  let dmg=atk();const isCrit=Math.random()<critChance();
- if(isCrit){dmg*=2;state.stats.crits++;qEvent('crit');setPose('attack',700);sfx.crit();shake()}else sfx.hit()
- dash();
- if(strike(dmg,{crit:isCrit}))return;
- enemyTurn(now);
- render();
+ if(isCrit){dmg*=2;state.stats.crits++;qEvent('crit');setPose('attack',700)}
+ atImpact(()=>{if(isCrit){sfx.crit();shake()}else sfx.hit();if(strike(dmg,{crit:isCrit}))return;enemyTurn(now);render()},true);
 }
 
 // ---------- tapping the scene calms the monster ----------
@@ -561,16 +563,16 @@ $('scene').addEventListener('pointerdown',e=>{
  const sr=$('scene').getBoundingClientRect(),x=Math.round(Math.max(10,Math.min(sr.width-10,e.clientX-sr.left))),y=Math.round(Math.max(10,Math.min(sr.height-10,e.clientY-sr.top)));
  const dmg=Math.max(1,Math.floor(atk()*.15*(1+Math.min(combo,20)*.04)));
  sfx.tap(combo);try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}
- burst(x,y,4,false,true);showCombo();dash();qEvent('tap');qEvent('combo',combo,true);
+ burst(x,y,4,false,true);showCombo();qEvent('tap');qEvent('combo',combo,true);
  if(combo===10||combo===20){sfx.chime();log='콤보 '+combo+'! 조금만 더!'}
- strike(dmg,{tap:true,x,y});checkAch();flush();
+ atImpact(()=>{strike(dmg,{tap:true,x,y});checkAch();flush()});
 });
 // ---------- boss guard + skills ----------
 $('guardBtn').onclick=()=>{if(!boss||![5,6,7].includes(bossT%8)||warnGuarded)return;warnGuarded=true;sfx.guard();$('guardBtn').hidden=true;log='방어 자세! 🛡️';refreshEnemy();$('actor').classList.add('shield')};
 function useSkill(i){
  const lv=state.skills[i],now=Date.now();if(!lv||skCd[i]>now||paused||restUntil>now||document.hidden)return;
  const total=cdOf(i,lv)*1000;skCd[i]=now+total;skTot[i]=total;qEvent('skill');
- if(i===0){sfx.star();setPose('attack',800);shake();dash();const[x,y]=enemyCenter();burst(x,y,8,false);log='별빛 한 방! ✨';strike(Math.floor(atk()*(5+.5*(lv-1))),{big:true})}
+ if(i===0){sfx.star();setPose('attack',800);log='별빛 한 방! ✨';const sd=Math.floor(atk()*(5+.5*(lv-1)));atImpact(()=>{shake();const[x,y]=enemyCenter();burst(x,y,8,false);strike(sd,{big:true})},true)}
  else if(i===1){const heal=Math.floor(maxHp()*(.3+.03*lv));hp=Math.min(maxHp(),hp+heal);sfx.hug();setPose('happy',1200);const[x,y]=heroCenter();burst(x,y,8,false);floatText('+'+heal,'heal');log='포근하게 안아줬어요. 체력이 회복돼요!'}
  else{shieldUntil=now+(3+.3*lv)*1000;sfx.shield();setPose('happy',1200);log='반짝 방어! 잠깐 아무도 코순이를 못 건드려요.'}
  render();
