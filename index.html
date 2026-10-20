@@ -446,7 +446,7 @@ const goldMult=()=>(1+state.luck*.04)*(1+.2*fr(1))*(rainbowUntil>Date.now()?2:1)
 const upCost=u=>Math.floor(u.base*u.g**state[u.k]);
 const mobId=()=>{const c=cur();return c.mobs[(prog().stage-1)%c.mobs.length]};
 const killGold=()=>Math.max(1,Math.round(cur().gold(prog().stage)*goldMult()));
-const enemyDmg=()=>golden?0:boss?Math.max(cur().bossDmg,Math.round(maxHp()*.05)):Math.floor(cur().dmg(prog().stage)*(elite?1.4:1));
+const enemyDmg=()=>golden?0:boss?Math.max(1,Math.round(Math.min(Math.max(cur().bossDmg,maxHp()*.05),(maxHp()/60+recovery())/1.27))):Math.floor(cur().dmg(prog().stage)*(elite?1.4:1));
 const gain=n=>{state.gold=Math.min(GOLD_CAP,state.gold+n)};
 let lungeBig=false,hp=maxHp(),enemyHp=0,enemyMax=0,boss=false,paused=false,restUntil=0,tickCount=0,lastTick=Date.now(),log='코순이가 숲을 탐험하고 있어요.',pose='',poseUntil=0,epose=0,epUntil=0,lungeUntil=0,secs=0,rainbowUntil=0,evLeft=90+Math.random()*60,elite=false,golden=false,goldenUntil=0,enterUntil=0,sceneShake=false,dashT=0,bossT=0,warnGuarded=false,shieldUntil=0,skCd=[0,0,0],skTot=[0,0,0],chestLeft=20+Math.random()*20,chestTtl=0,bonus=[];
 const setPose=(p,ms)=>{pose=p;poseUntil=Date.now()+ms};
@@ -478,7 +478,7 @@ function spawn(){const c=cur(),p=prog();
  elite=false;golden=false;
  if(!boss){if(p.kills===4)elite=true;else if(state.stats.kills>=8&&Math.random()<.04){golden=true;goldenUntil=Date.now()+8000}}
  enterUntil=Date.now()+450;walkUntil=Date.now()+1500;setTimeout(refreshEnemy,480);
- enemyMax=boss?Math.max(c.bossHp,Math.round(atk()*50*Math.min(1,state.attack/10))):Math.floor(c.hp(p.stage)*(elite?2.2:golden?.7:1));enemyHp=enemyMax;
+ enemyMax=boss?Math.max(c.bossHp,Math.round(atk()*110*Math.min(1,state.attack/10))):Math.floor(c.hp(p.stage)*(elite?2.2:golden?.7:1));enemyHp=enemyMax;
  if(golden){showBanner('✨ 황금 몽글 출현!','8초 안에 달래요!');sfx.chime();setPose('surprise',1200)}else if(elite)showBanner('대장 등장!','')
  render()}
 
